@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -474,3 +475,32 @@ fun homeAgentIcon(module: AppModule): ImageVector = when (module) {
 fun chatFallbackIcon(): ImageVector = Icons.Filled.AutoAwesome
 
 fun documentIcon(): ImageVector = Icons.Filled.Description
+
+@Composable
+fun MockFallbackNotice(
+    message: String = "网络或服务异常，当前展示本地演示数据（Mock）。",
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Red50)
+            .border(1.dp, Red100, RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.WarningAmber,
+            contentDescription = null,
+            tint = Red600,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+            color = Red600,
+        )
+    }
+}

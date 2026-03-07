@@ -51,7 +51,9 @@ import androidx.compose.ui.unit.sp
 import com.example.client.data.AppModule
 import com.example.client.data.greetingForHour
 import com.example.client.data.homeAgents
+import com.example.client.data.repository.RepositoryProvider
 import com.example.client.ui.components.GradientIcon
+import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
 import com.example.client.ui.components.homeAgentIcon
@@ -137,14 +139,25 @@ private fun AppHomeContent(
     onOpenChat: () -> Unit,
     onSelectModule: (AppModule) -> Unit,
 ) {
+    val homeRepository = remember { RepositoryProvider.homeRepository }
+    var dashboardSnapshot by remember { mutableStateOf<com.example.client.data.repository.HomeDashboardSnapshot?>(null) }
     val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
-    val greeting = remember(hour) { greetingForHour(hour) }
+    val localGreeting = remember(hour) { greetingForHour(hour) }
+    val greeting = dashboardSnapshot?.greeting ?: localGreeting
+    val displayAgents = dashboardSnapshot?.agentFeed?.ifEmpty { homeAgents } ?: homeAgents
+    val isMockFallback = dashboardSnapshot?.simulated == true
     var activeIndex by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(homeRepository) {
+        dashboardSnapshot = homeRepository.getDashboardSnapshot()
+    }
+
+    LaunchedEffect(displayAgents.size) {
+        if (displayAgents.isEmpty()) return@LaunchedEffect
+        activeIndex = 0
         while (true) {
             delay(3_000)
-            activeIndex = (activeIndex + 1) % homeAgents.size
+            activeIndex = (activeIndex + 1) % displayAgents.size
         }
     }
 
@@ -196,13 +209,19 @@ private fun AppHomeContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "3",
+                            text = (dashboardSnapshot?.notificationCount ?: 3).toString(),
                             color = White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                         )
                     }
                 }
+            }
+        }
+
+        if (isMockFallback) {
+            item {
+                MockFallbackNotice(message = "首页 API 调用失败，当前展示本地演示数据。")
             }
         }
 
@@ -238,11 +257,11 @@ private fun AppHomeContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        HomeHeroStat(value = "24", label = "今日新发现职位")
+                        HomeHeroStat(value = (dashboardSnapshot?.heroStats?.newJobsToday ?: 24).toString(), label = "今日新发现职位")
                         HomeHeroDivider()
-                        HomeHeroStat(value = "89%", label = "匹配成功率")
+                        HomeHeroStat(value = "${dashboardSnapshot?.heroStats?.matchSuccessRate ?: 89}%", label = "匹配成功率")
                         HomeHeroDivider()
-                        HomeHeroStat(value = "5", label = "面试邀请")
+                        HomeHeroStat(value = (dashboardSnapshot?.heroStats?.interviewInvites ?: 5).toString(), label = "面试邀请")
                     }
                 }
             }
@@ -309,7 +328,7 @@ private fun AppHomeContent(
         }
 
         item {
-            val activeAgent = homeAgents[activeIndex]
+            val activeAgent = displayAgents[activeIndex]
             val palette = modulePalette(activeAgent.module)
 
             Box(
@@ -368,7 +387,7 @@ private fun AppHomeContent(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            homeAgents.forEachIndexed { index, _ ->
+                            displayAgents.forEachIndexed { index, _ ->
                                 Box(
                                     modifier = Modifier
                                         .size(width = if (index == activeIndex) 16.dp else 6.dp, height = 6.dp)
@@ -390,7 +409,7 @@ private fun AppHomeContent(
             )
         }
 
-        items(homeAgents.chunked(2)) { rowItems ->
+        items(displayAgents.chunked(2)) { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),

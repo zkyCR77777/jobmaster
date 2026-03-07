@@ -62,7 +62,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import com.example.client.data.AppModule
 import com.example.client.data.eagleJobs
+import com.example.client.data.repository.RepositoryProvider
 import com.example.client.ui.components.AppCard
+import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
@@ -95,6 +97,9 @@ fun HawkEyeScreen(onBack: () -> Unit) {
     var isScanning by remember { mutableStateOf(true) }
     var scanProgress by remember { mutableIntStateOf(0) }
     var discoveredCount by remember { mutableIntStateOf(0) }
+    var sourceJobs by remember { mutableStateOf(eagleJobs) }
+    var isMockFallback by remember { mutableStateOf(false) }
+    val jobsRepository = remember { RepositoryProvider.jobsRepository }
     val palette = modulePalette(AppModule.EAGLE)
     val sweepTransition = rememberInfiniteTransition(label = "eagle_sweep")
     val sweepRotation by sweepTransition.animateFloat(
@@ -108,21 +113,23 @@ fun HawkEyeScreen(onBack: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
+        val snapshot = jobsRepository.getJobsSnapshot()
+        sourceJobs = snapshot.items
+        isMockFallback = snapshot.simulated
         while (scanProgress < 100) {
             delay(60)
             scanProgress += 2
-            discoveredCount = when {
-                scanProgress > 70 -> 4
-                scanProgress > 45 -> 3
-                scanProgress > 20 -> 2
-                scanProgress > 0 -> 1
-                else -> 0
+            val totalJobs = sourceJobs.size
+            discoveredCount = if (totalJobs == 0 || scanProgress == 0) {
+                0
+            } else {
+                ((scanProgress / 100f) * totalJobs).toInt().coerceIn(1, totalJobs)
             }
         }
         isScanning = false
     }
 
-    val jobs = eagleJobs.take(discoveredCount.coerceAtMost(eagleJobs.size))
+    val jobs = sourceJobs.take(discoveredCount.coerceAtMost(sourceJobs.size))
 
     LazyColumn(
         modifier = Modifier
@@ -137,6 +144,12 @@ fun HawkEyeScreen(onBack: () -> Unit) {
                 subtitle = "全天候职位雷达扫描",
                 onBack = onBack,
             )
+        }
+
+        if (isMockFallback) {
+            item {
+                MockFallbackNotice(message = "职位 API 调用失败，当前展示本地演示数据。")
+            }
         }
 
         item {
@@ -202,7 +215,7 @@ fun HawkEyeScreen(onBack: () -> Unit) {
                             }
                         }
 
-                        jobs.forEachIndexed { index, _ ->
+                        jobs.take(4).forEachIndexed { index, _ ->
                             val angle = (index * 90 + 45) * (PI / 180f)
                             val x = (cos(angle) * 72f).roundToInt()
                             val y = (sin(angle) * 72f).roundToInt()

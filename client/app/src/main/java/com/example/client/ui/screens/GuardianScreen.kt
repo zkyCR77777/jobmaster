@@ -59,7 +59,9 @@ import com.example.client.data.ContractClause
 import com.example.client.data.ContractRiskLevel
 import com.example.client.data.guardianClauses
 import com.example.client.data.guardianScanStages
+import com.example.client.data.repository.RepositoryProvider
 import com.example.client.ui.components.AppCard
+import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
@@ -98,12 +100,22 @@ private data class UploadedDocument(
 fun GuardianScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val palette = modulePalette(AppModule.GUARDIAN)
+    val contractRepository = remember { RepositoryProvider.contractRepository }
     var uploadedFile by remember { mutableStateOf<UploadedDocument?>(null) }
     var showUploadPanel by remember { mutableStateOf(true) }
     var isScanning by remember { mutableStateOf(false) }
     var scanProgress by remember { mutableIntStateOf(0) }
     var expandedId by remember { mutableStateOf<Int?>(null) }
     var highlightedId by remember { mutableStateOf<Int?>(null) }
+    var clauses by remember { mutableStateOf(guardianClauses) }
+    var summaryLabel by remember { mutableStateOf("需要关注") }
+    var shouldLoadDemoFromApi by remember { mutableStateOf(false) }
+    var isMockFallback by remember { mutableStateOf(false) }
+    val (summaryBackground, summaryColor) = when (summaryLabel) {
+        "较安全" -> Emerald100 to Emerald600
+        "高风险" -> Red50 to Red600
+        else -> Amber100 to Amber600
+    }
 
     val filePicker = rememberLauncherForActivityResult(contract = OpenDocument()) { uri: Uri? ->
         val file = uri?.let { context.resolveDocument(it) }
@@ -112,6 +124,11 @@ fun GuardianScreen(onBack: () -> Unit) {
             showUploadPanel = false
             isScanning = true
             scanProgress = 0
+            shouldLoadDemoFromApi = false
+            clauses = guardianClauses
+            summaryLabel = "需要关注"
+            expandedId = null
+            isMockFallback = false
         }
     }
 
@@ -124,9 +141,19 @@ fun GuardianScreen(onBack: () -> Unit) {
         isScanning = false
     }
 
-    LaunchedEffect(isScanning, showUploadPanel) {
-        if (isScanning || showUploadPanel) return@LaunchedEffect
-        val riskyIds = guardianClauses.filter { it.riskLevel != ContractRiskLevel.SAFE }.map { it.id }
+    LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi, contractRepository) {
+        if (isScanning || showUploadPanel || !shouldLoadDemoFromApi) return@LaunchedEffect
+        val snapshot = contractRepository.getContractSnapshot(contractId = "demo")
+        summaryLabel = snapshot.summaryLabel
+        clauses = snapshot.clauses
+        expandedId = null
+        isMockFallback = snapshot.simulated
+        shouldLoadDemoFromApi = false
+    }
+
+    LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi, clauses) {
+        if (isScanning || showUploadPanel || shouldLoadDemoFromApi) return@LaunchedEffect
+        val riskyIds = clauses.filter { it.riskLevel != ContractRiskLevel.SAFE }.map { it.id }
         riskyIds.forEach { id ->
             highlightedId = id
             delay(600)
@@ -134,13 +161,11 @@ fun GuardianScreen(onBack: () -> Unit) {
         highlightedId = null
     }
 
-    val stats = remember {
-        Triple(
-            guardianClauses.count { it.riskLevel == ContractRiskLevel.SAFE },
-            guardianClauses.count { it.riskLevel == ContractRiskLevel.WARNING },
-            guardianClauses.count { it.riskLevel == ContractRiskLevel.DANGER },
-        )
-    }
+    val stats = Triple(
+        clauses.count { it.riskLevel == ContractRiskLevel.SAFE },
+        clauses.count { it.riskLevel == ContractRiskLevel.WARNING },
+        clauses.count { it.riskLevel == ContractRiskLevel.DANGER },
+    )
 
     LazyColumn(
         modifier = Modifier
@@ -155,6 +180,12 @@ fun GuardianScreen(onBack: () -> Unit) {
                 subtitle = "智能合同条款解读",
                 onBack = onBack,
             )
+        }
+
+        if (isMockFallback) {
+            item {
+                MockFallbackNotice(message = "合同分析 API 调用失败，当前展示本地演示数据。")
+            }
         }
 
         if (showUploadPanel) {
@@ -283,6 +314,11 @@ fun GuardianScreen(onBack: () -> Unit) {
                                 showUploadPanel = false
                                 isScanning = true
                                 scanProgress = 0
+                                shouldLoadDemoFromApi = true
+                                clauses = guardianClauses
+                                summaryLabel = "需要关注"
+                                expandedId = null
+                                isMockFallback = false
                             },
                         )
                     }
@@ -369,6 +405,12 @@ fun GuardianScreen(onBack: () -> Unit) {
                                         uploadedFile = null
                                         showUploadPanel = true
                                         scanProgress = 0
+                                        shouldLoadDemoFromApi = false
+                                        clauses = guardianClauses
+                                        summaryLabel = "需要关注"
+                                        expandedId = null
+                                        highlightedId = null
+                                        isMockFallback = false
                                     },
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -465,9 +507,9 @@ fun GuardianScreen(onBack: () -> Unit) {
                                 title = "风险摘要",
                             )
                             PillTag(
-                                text = "需要关注",
-                                backgroundColor = Amber100,
-                                contentColor = Amber600,
+                                text = summaryLabel,
+                                backgroundColor = summaryBackground,
+                                contentColor = summaryColor,
                             )
                         }
 
@@ -489,7 +531,7 @@ fun GuardianScreen(onBack: () -> Unit) {
                     )
                 }
 
-                itemsIndexed(guardianClauses, key = { _, clause -> clause.id }) { _, clause ->
+                itemsIndexed(clauses, key = { _, clause -> clause.id }) { _, clause ->
                     ClauseCard(
                         clause = clause,
                         expanded = expandedId == clause.id,

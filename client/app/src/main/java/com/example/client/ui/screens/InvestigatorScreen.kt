@@ -55,7 +55,9 @@ import com.example.client.data.CompanyProfile
 import com.example.client.data.CompanyRiskLevel
 import com.example.client.data.investigatorCompanies
 import com.example.client.data.investigatorSources
+import com.example.client.data.repository.RepositoryProvider
 import com.example.client.ui.components.AppCard
+import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
@@ -83,10 +85,22 @@ import kotlinx.coroutines.delay
 @Composable
 fun InvestigatorScreen(onBack: () -> Unit) {
     val palette = modulePalette(AppModule.INVESTIGATOR)
+    val companyRepository = remember { RepositoryProvider.companyRepository }
     var isAnalyzing by remember { mutableStateOf(true) }
     var progress by remember { mutableIntStateOf(0) }
     var expandedId by remember { mutableStateOf<Int?>(null) }
+    var companies by remember { mutableStateOf(investigatorCompanies) }
+    var isMockFallback by remember { mutableStateOf(false) }
     val completedSources = remember { mutableStateListOf<String>() }
+    val lowRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.LOW }
+    val mediumRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.MEDIUM }
+    val highRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.HIGH }
+
+    LaunchedEffect(companyRepository) {
+        val snapshot = companyRepository.getCompaniesSnapshot()
+        companies = snapshot.items
+        isMockFallback = snapshot.simulated
+    }
 
     LaunchedEffect(Unit) {
         while (progress < 100) {
@@ -113,6 +127,12 @@ fun InvestigatorScreen(onBack: () -> Unit) {
                 subtitle = "多维数据企业风险洞察",
                 onBack = onBack,
             )
+        }
+
+        if (isMockFallback) {
+            item {
+                MockFallbackNotice(message = "企业分析 API 调用失败，当前展示本地演示数据。")
+            }
         }
 
         if (isAnalyzing) {
@@ -198,9 +218,9 @@ fun InvestigatorScreen(onBack: () -> Unit) {
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        RiskOverviewCard(value = "2", label = "低风险", background = Emerald50, color = Emerald600, modifier = Modifier.weight(1f))
-                        RiskOverviewCard(value = "0", label = "中风险", background = palette.accentSoft, color = palette.accent, modifier = Modifier.weight(1f))
-                        RiskOverviewCard(value = "1", label = "高风险", background = Red50, color = Red600, modifier = Modifier.weight(1f))
+                        RiskOverviewCard(value = lowRiskCount.toString(), label = "低风险", background = Emerald50, color = Emerald600, modifier = Modifier.weight(1f))
+                        RiskOverviewCard(value = mediumRiskCount.toString(), label = "中风险", background = palette.accentSoft, color = palette.accent, modifier = Modifier.weight(1f))
+                        RiskOverviewCard(value = highRiskCount.toString(), label = "高风险", background = Red50, color = Red600, modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -214,7 +234,7 @@ fun InvestigatorScreen(onBack: () -> Unit) {
             )
         }
 
-        itemsIndexed(investigatorCompanies, key = { _, company -> company.id }) { _, company ->
+        itemsIndexed(companies, key = { _, company -> company.id }) { _, company ->
             CompanyRiskCard(
                 company = company,
                 expanded = expandedId == company.id,

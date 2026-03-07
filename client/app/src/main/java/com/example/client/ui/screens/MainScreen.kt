@@ -58,7 +58,8 @@ import com.example.client.data.AppModule
 import com.example.client.data.ChatMessage
 import com.example.client.data.ChatSender
 import com.example.client.data.chatQuickCommands
-import com.example.client.data.simulatedResponses
+import com.example.client.data.repository.RepositoryProvider
+import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.NeutralInputCircle
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.TypingDots
@@ -78,6 +79,7 @@ import com.example.client.ui.theme.Slate500
 import com.example.client.ui.theme.Slate600
 import com.example.client.ui.theme.White
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @Composable
@@ -98,8 +100,11 @@ fun AiChatOverlay(
     var inputValue by remember { mutableStateOf("") }
     var isTyping by remember { mutableStateOf(false) }
     var activeAgent by remember { mutableStateOf<AppModule?>(currentModule) }
+    var sessionId by remember { mutableStateOf<String?>(null) }
+    var isMockFallback by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val chatRepository = remember { RepositoryProvider.chatRepository }
 
     LaunchedEffect(messages.size, isTyping, isOpen) {
         if (isOpen) {
@@ -125,7 +130,7 @@ fun AiChatOverlay(
 
     fun sendMessage(text: String? = null) {
         val content = (text ?: inputValue).trim()
-        if (content.isEmpty()) return
+        if (content.isEmpty() || isTyping) return
 
         val targetModule = resolveModule(content)
         messages += ChatMessage(
@@ -138,15 +143,123 @@ fun AiChatOverlay(
         activeAgent = targetModule
 
         scope.launch {
-            simulatedResponses[targetModule].orEmpty().forEachIndexed { index, response ->
-                delay(950L + index * 260L)
-                messages += ChatMessage(
-                    id = System.currentTimeMillis() + index,
-                    sender = ChatSender.AGENT,
-                    content = response,
-                    agent = targetModule,
+            suspend fun appendAssistantReplies(
+                replies: List<String>,
+                module: AppModule,
+                baseDelay: Long,
+            ) {
+                replies.forEachIndexed { index, response ->
+                    delay(baseDelay + index * 220L)
+                    messages += ChatMessage(
+                        id = System.currentTimeMillis() + index,
+                        sender = ChatSender.AGENT,
+                        content = response,
+                        agent = module,
+                    )
+                }
+            }
+
+            val snapshot = chatRepository.sendMessage(
+                content = content,
+                currentModule = targetModule,
+                sessionId = sessionId,
+            )
+            sessionId = snapshot.sessionId ?: sessionId
+            activeAgent = snapshot.detectedModule
+            isMockFallback = snapshot.simulated
+
+            if (snapshot.simulated || snapshot.sessionId.isNullOrBlank() || snapshot.messageId.isNullOrBlank()) {
+                appendAssistantReplies(
+                    replies = snapshot.assistantMessages,
+                    module = snapshot.detectedModule,
+                    baseDelay = 950L,
+                )
+                isTyping = false
+                return@launch
+            }
+
+            val streamingBubbleId = System.currentTimeMillis() + 9
+            messages += ChatMessage(
+                id = streamingBubbleId,
+                sender = ChatSender.AGENT,
+                content = "",
+                agent = snapshot.detectedModule,
+            )
+            var hasStreamChunk = false
+
+            val streamResult = runCatching {
+                chatRepository.streamAssistantReply(
+                    sessionId = snapshot.sessionId,
+                    messageId = snapshot.messageId,
+                ).collect { chunk ->
+                    if (chunk.isBlank()) return@collect
+                    val index = messages.indexOfFirst { it.id == streamingBubbleId }
+                    if (index < 0) return@collect
+                    val current = messages[index]
+                    messages[index] = current.copy(
+                        content = current.content + chunk,
+                        agent = snapshot.detectedModule,
+                    )
+                    if (!hasStreamChunk) {
+                        hasStreamChunk = true
+                        isTyping = false
+                    }
+                }
+            }
+
+            if (streamResult.isFailure || !hasStreamChunk) {
+                val historyReplies = runCatching {
+                    chatRepository.loadLatestAssistantMessages(snapshot.sessionId)
+                }.getOrDefault(emptyList())
+
+                if (historyReplies.isNotEmpty()) {
+                    val firstReply = historyReplies.first()
+                    val index = messages.indexOfFirst { it.id == streamingBubbleId }
+                    if (index >= 0) {
+                        messages[index] = messages[index].copy(
+                            content = firstReply,
+                            agent = snapshot.detectedModule,
+                        )
+                    } else {
+                        messages += ChatMessage(
+                            id = System.currentTimeMillis(),
+                            sender = ChatSender.AGENT,
+                            content = firstReply,
+                            agent = snapshot.detectedModule,
+                        )
+                    }
+
+                    historyReplies.drop(1).forEachIndexed { index, reply ->
+                        messages += ChatMessage(
+                            id = System.currentTimeMillis() + index + 1,
+                            sender = ChatSender.AGENT,
+                            content = reply,
+                            agent = snapshot.detectedModule,
+                        )
+                    }
+                    isTyping = false
+                    return@launch
+                }
+
+                val index = messages.indexOfFirst { it.id == streamingBubbleId }
+                if (index >= 0 && messages[index].content.isBlank()) {
+                    messages.removeAt(index)
+                }
+
+                val mockSnapshot = chatRepository.buildMockSnapshot(
+                    content = content,
+                    currentModule = targetModule,
+                    sessionId = snapshot.sessionId,
+                )
+                activeAgent = mockSnapshot.detectedModule
+                isMockFallback = true
+                appendAssistantReplies(
+                    replies = mockSnapshot.assistantMessages,
+                    module = mockSnapshot.detectedModule,
+                    baseDelay = 950L,
                 )
             }
+
             isTyping = false
         }
     }
@@ -226,6 +339,13 @@ fun AiChatOverlay(
                         .background(AppBorder),
                 )
 
+                if (isMockFallback) {
+                    MockFallbackNotice(
+                        message = "AI 对话服务调用失败，当前回复来自本地演示数据。",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
@@ -260,7 +380,7 @@ fun AiChatOverlay(
                                     text = command.label,
                                     backgroundColor = palette.accentSurface,
                                     contentColor = palette.accent,
-                                    modifier = Modifier.clickable { sendMessage(command.label) },
+                                    modifier = Modifier.clickable(enabled = !isTyping) { sendMessage(command.label) },
                                 )
                             }
                         }
@@ -327,7 +447,7 @@ fun AiChatOverlay(
                                             Brush.linearGradient(listOf(Indigo600, AppPrimary))
                                         }
                                     )
-                                    .clickable(enabled = inputValue.isNotBlank()) { sendMessage() },
+                                    .clickable(enabled = inputValue.isNotBlank() && !isTyping) { sendMessage() },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(

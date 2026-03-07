@@ -43,11 +43,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.client.data.AppModule
-import com.example.client.data.DeliveryQueueItem
 import com.example.client.data.DeliveryQueueStatus
 import com.example.client.data.phantomDeliveryQueue
 import com.example.client.data.phantomResumeSteps
+import com.example.client.data.repository.RepositoryProvider
 import com.example.client.ui.components.AppCard
+import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.ProgressBar
@@ -73,9 +74,12 @@ import kotlin.math.roundToInt
 @Composable
 fun DeliveryScreen(onBack: () -> Unit) {
     val palette = modulePalette(AppModule.PHANTOM)
+    val deliveryRepository = remember { RepositoryProvider.deliveryRepository }
     var completedLines by remember { mutableStateOf(emptyList<String>()) }
     var currentTypingLine by remember { mutableStateOf("") }
     var queue by remember { mutableStateOf(phantomDeliveryQueue) }
+    var shouldAutoPromoteQueue by remember { mutableStateOf(true) }
+    var isMockFallback by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         phantomResumeSteps.forEach { step ->
@@ -90,7 +94,15 @@ fun DeliveryScreen(onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(deliveryRepository) {
+        val snapshot = deliveryRepository.getDeliveryQueue()
+        queue = snapshot.items
+        shouldAutoPromoteQueue = snapshot.simulated
+        isMockFallback = snapshot.simulated
+    }
+
+    LaunchedEffect(shouldAutoPromoteQueue) {
+        if (!shouldAutoPromoteQueue) return@LaunchedEffect
         while (true) {
             delay(2_000)
             var promoting = true
@@ -124,6 +136,12 @@ fun DeliveryScreen(onBack: () -> Unit) {
                 subtitle = "智能简历定制与自动投递",
                 onBack = onBack,
             )
+        }
+
+        if (isMockFallback) {
+            item {
+                MockFallbackNotice(message = "投递 API 调用失败，当前展示本地演示数据。")
+            }
         }
 
         item {
