@@ -27,3 +27,4 @@ server/.env
 
 # Docs build
 docs/_build/
+SKILL.md

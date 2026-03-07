@@ -1,0 +1,50 @@
+[project]
+name = "job-master-server"
+version = "0.1.0"
+description = "求职高手 Smart Pact 后端服务"
+requires-python = ">=3.12"
+dependencies = [
+    # Web 框架
+    "fastapi[standard]>=0.115",
+    # 数据库
+    "sqlmodel>=0.0.22",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    # 缓存 & 队列
+    "redis>=5.2",
+    "celery>=5.4",
+    # 认证
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7",
+    # AI
+    "langchain>=0.3",
+    "langchain-community>=0.3",
+    "openai>=1",
+    # 爬虫
+    "playwright>=1.49",
+    # 文件处理
+    "python-docx>=1.1",
+    "PyPDF2>=3.0",
+    # HTTP 客户端
+    "httpx>=0.28",
+    # 工具
+    "pydantic-settings>=2.7",
+    "loguru>=0.7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "FAST"]
