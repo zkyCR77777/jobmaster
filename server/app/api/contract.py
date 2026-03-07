@@ -1,27 +1,41 @@
-from fastapi import APIRouter
+from typing import Annotated
 
-router = APIRouter(prefix="/api/contract", tags=["契约卫士 — 合同解析"])
+from fastapi import APIRouter, File, HTTPException, Path, UploadFile, status
 
+from app.schemas.common import ApiResponse
+from app.schemas.contract import ContractClauseList, ContractReport, ContractSummary, ContractTask
 
-@router.post("/upload")
-async def upload_contract():
-    """上传合同文件（PDF / Word / 图片）"""
-    ...
-
-
-@router.get("/{contract_id}")
-async def get_contract_analysis(contract_id: str):
-    """获取合同解析结果"""
-    ...
+router = APIRouter(prefix="/api/v1/contracts", tags=["契约卫士 — 合同解析"])
 
 
-@router.get("/{contract_id}/clauses")
-async def get_contract_clauses(contract_id: str):
-    """逐条款风险分析与通俗解读"""
-    ...
+@router.post("", response_model=ApiResponse[ContractTask])
+async def upload_contract(
+    file: Annotated[UploadFile, File(description="合同文件")],
+) -> ApiResponse[ContractTask]:
+    """上传合同文件（PDF / Word / 图片）。"""
+    _ = file
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented yet")
 
 
-@router.get("/{contract_id}/report")
-async def get_contract_report(contract_id: str):
-    """合同整体评估报告（综合评分 + 风险摘要）"""
-    ...
+@router.get("/{contract_id}", response_model=ApiResponse[ContractSummary])
+async def get_contract_analysis(
+    contract_id: Annotated[str, Path(min_length=1)],
+) -> ApiResponse[ContractSummary]:
+    """获取合同解析结果。"""
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented yet")
+
+
+@router.get("/{contract_id}/clauses", response_model=ApiResponse[ContractClauseList])
+async def get_contract_clauses(
+    contract_id: Annotated[str, Path(min_length=1)],
+) -> ApiResponse[ContractClauseList]:
+    """逐条款风险分析与通俗解读。"""
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented yet")
+
+
+@router.get("/{contract_id}/report", response_model=ApiResponse[ContractReport])
+async def get_contract_report(
+    contract_id: Annotated[str, Path(min_length=1)],
+) -> ApiResponse[ContractReport]:
+    """合同整体评估报告。"""
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented yet")
