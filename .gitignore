@@ -1,0 +1,29 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Android
+client/.gradle/
+client/build/
+client/app/build/
+client/local.properties
+client/.cxx/
+client/.externalNativeBuild/
+client/captures/
+
+# Android reference project (not part of build)
+client/agent-driven-app/
+
+# Server (根据后续技术栈补充)
+server/__pycache__/
+server/.venv/
+server/node_modules/
+server/.env
+
+# Docs build
+docs/_build/
