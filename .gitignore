@@ -21,9 +21,18 @@ client/agent-driven-app/
 
 # Server (根据后续技术栈补充)
 server/__pycache__/
+server/**/__pycache__/
+server/*.py[cod]
 server/.venv/
 server/node_modules/
 server/.env
+server/.pytest_cache/
+server/.ruff_cache/
+server/.mypy_cache/
+server/.hypothesis/
+server/.coverage
+server/htmlcov/
+server/.cache/
 
 # Docs build
 docs/_build/
