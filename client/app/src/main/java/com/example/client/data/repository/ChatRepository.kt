@@ -4,14 +4,15 @@ import com.example.client.BuildConfig
 import com.example.client.data.AppModule
 import com.example.client.data.simulatedResponses
 import com.example.client.data.remote.ChatSendMessageRequest
-import com.example.client.data.remote.NetworkClient
 import com.example.client.data.remote.SmartPactApi
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import javax.inject.Inject
 
 data class ChatReplySnapshot(
     val sessionId: String?,
@@ -22,8 +23,9 @@ data class ChatReplySnapshot(
     val simulated: Boolean,
 )
 
-class ChatRepository(
+class ChatRepository @Inject constructor(
     private val api: SmartPactApi,
+    private val okHttpClient: OkHttpClient,
 ) {
     suspend fun sendMessage(
         content: String,
@@ -57,7 +59,7 @@ class ChatRepository(
                 sessionId = currentSessionId,
                 messageId = sendResult.message_id,
                 detectedModule = detectedModule,
-                assistantMessages = emptyList(),
+                assistantMessages = loadLatestAssistantMessages(currentSessionId),
                 welcomeMessage = welcomeMessage,
                 simulated = false,
             )
@@ -81,7 +83,7 @@ class ChatRepository(
             pageSize = 50,
         ).data.items
             .filter { it.role == "assistant" && it.content.isNotBlank() }
-            .takeLast(2)
+            .takeLast(1)
             .map { it.content.trim() }
     }
 
@@ -100,7 +102,7 @@ class ChatRepository(
             .get()
             .build()
 
-        NetworkClient.rawClient.newCall(request).execute().use { response ->
+        okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 error("SSE request failed: HTTP ${response.code}")
             }

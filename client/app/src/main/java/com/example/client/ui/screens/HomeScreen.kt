@@ -51,7 +51,9 @@ import androidx.compose.ui.unit.sp
 import com.example.client.data.AppModule
 import com.example.client.data.greetingForHour
 import com.example.client.data.homeAgents
-import com.example.client.data.repository.RepositoryProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.viewmodel.HomeViewModel
 import com.example.client.ui.components.GradientIcon
 import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.PillTag
@@ -139,18 +141,15 @@ private fun AppHomeContent(
     onOpenChat: () -> Unit,
     onSelectModule: (AppModule) -> Unit,
 ) {
-    val homeRepository = remember { RepositoryProvider.homeRepository }
-    var dashboardSnapshot by remember { mutableStateOf<com.example.client.data.repository.HomeDashboardSnapshot?>(null) }
+    val homeViewModel: HomeViewModel = hiltViewModel()
+    val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val dashboardSnapshot = uiState.dashboardSnapshot
     val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val localGreeting = remember(hour) { greetingForHour(hour) }
     val greeting = dashboardSnapshot?.greeting ?: localGreeting
     val displayAgents = dashboardSnapshot?.agentFeed?.ifEmpty { homeAgents } ?: homeAgents
     val isMockFallback = dashboardSnapshot?.simulated == true
     var activeIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(homeRepository) {
-        dashboardSnapshot = homeRepository.getDashboardSnapshot()
-    }
 
     LaunchedEffect(displayAgents.size) {
         if (displayAgents.isEmpty()) return@LaunchedEffect

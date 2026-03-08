@@ -55,7 +55,9 @@ import com.example.client.data.CompanyProfile
 import com.example.client.data.CompanyRiskLevel
 import com.example.client.data.investigatorCompanies
 import com.example.client.data.investigatorSources
-import com.example.client.data.repository.RepositoryProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.viewmodel.CompanyViewModel
 import com.example.client.ui.components.AppCard
 import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
@@ -85,22 +87,18 @@ import kotlinx.coroutines.delay
 @Composable
 fun InvestigatorScreen(onBack: () -> Unit) {
     val palette = modulePalette(AppModule.INVESTIGATOR)
-    val companyRepository = remember { RepositoryProvider.companyRepository }
+    val companyViewModel: CompanyViewModel = hiltViewModel()
+    val uiState by companyViewModel.uiState.collectAsStateWithLifecycle()
     var isAnalyzing by remember { mutableStateOf(true) }
     var progress by remember { mutableIntStateOf(0) }
     var expandedId by remember { mutableStateOf<Int?>(null) }
-    var companies by remember { mutableStateOf(investigatorCompanies) }
-    var isMockFallback by remember { mutableStateOf(false) }
+    val companies = uiState.companies
+    val isMockFallback = uiState.simulated
     val completedSources = remember { mutableStateListOf<String>() }
     val lowRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.LOW }
     val mediumRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.MEDIUM }
     val highRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.HIGH }
 
-    LaunchedEffect(companyRepository) {
-        val snapshot = companyRepository.getCompaniesSnapshot()
-        companies = snapshot.items
-        isMockFallback = snapshot.simulated
-    }
 
     LaunchedEffect(Unit) {
         while (progress < 100) {

@@ -1,6 +1,12 @@
 """API schemas package."""
 
-from app.schemas.auth import LoginRequest, RefreshTokenRequest, RegisterRequest, TokenData, UserProfile
+from app.schemas.auth import (
+    LoginRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenData,
+    UserProfile,
+)
 from app.schemas.chat import (
     ChatMessageItem,
     ChatMessagePage,

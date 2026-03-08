@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 
 class Resume(SQLModel, table=True):

@@ -4,6 +4,7 @@ import com.example.client.data.ContractClause
 import com.example.client.data.ContractRiskLevel
 import com.example.client.data.guardianClauses
 import com.example.client.data.remote.SmartPactApi
+import javax.inject.Inject
 
 data class ContractSnapshot(
     val summaryLabel: String,
@@ -11,7 +12,7 @@ data class ContractSnapshot(
     val simulated: Boolean,
 )
 
-class ContractRepository(
+class ContractRepository @Inject constructor(
     private val api: SmartPactApi,
 ) {
     suspend fun getContractSnapshot(contractId: String): ContractSnapshot {

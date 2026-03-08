@@ -4,13 +4,14 @@ import com.example.client.data.CompanyProfile
 import com.example.client.data.CompanyRiskLevel
 import com.example.client.data.investigatorCompanies
 import com.example.client.data.remote.SmartPactApi
+import javax.inject.Inject
 
 data class CompanySnapshot(
     val items: List<CompanyProfile>,
     val simulated: Boolean,
 )
 
-class CompanyRepository(
+class CompanyRepository @Inject constructor(
     private val api: SmartPactApi,
 ) {
     suspend fun getCompaniesSnapshot(): CompanySnapshot {

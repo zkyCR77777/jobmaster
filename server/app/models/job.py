@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
 
-from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel
 
 
 class Job(SQLModel, table=True):

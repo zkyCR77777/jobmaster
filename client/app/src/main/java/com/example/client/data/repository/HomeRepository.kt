@@ -5,6 +5,7 @@ import com.example.client.data.HomeAgent
 import com.example.client.data.greetingForHour
 import com.example.client.data.homeAgents
 import com.example.client.data.remote.SmartPactApi
+import javax.inject.Inject
 import java.util.Calendar
 
 data class HomeHeroStats(
@@ -21,7 +22,7 @@ data class HomeDashboardSnapshot(
     val simulated: Boolean,
 )
 
-class HomeRepository(
+class HomeRepository @Inject constructor(
     private val api: SmartPactApi,
 ) {
     suspend fun getDashboardSnapshot(): HomeDashboardSnapshot {

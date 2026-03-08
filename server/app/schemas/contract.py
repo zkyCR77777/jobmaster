@@ -1,6 +1,12 @@
 from pydantic import Field
 
-from app.schemas.common import ContractRiskLevelEnum, SchemaModel, TaskProgress, TaskStage, TaskStatusEnum
+from app.schemas.common import (
+    ContractRiskLevelEnum,
+    SchemaModel,
+    TaskProgress,
+    TaskStage,
+    TaskStatusEnum,
+)
 
 
 class ContractTask(TaskProgress):

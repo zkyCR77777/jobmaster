@@ -62,7 +62,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import com.example.client.data.AppModule
 import com.example.client.data.eagleJobs
-import com.example.client.data.repository.RepositoryProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.viewmodel.JobsViewModel
 import com.example.client.ui.components.AppCard
 import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
@@ -97,9 +99,10 @@ fun HawkEyeScreen(onBack: () -> Unit) {
     var isScanning by remember { mutableStateOf(true) }
     var scanProgress by remember { mutableIntStateOf(0) }
     var discoveredCount by remember { mutableIntStateOf(0) }
-    var sourceJobs by remember { mutableStateOf(eagleJobs) }
-    var isMockFallback by remember { mutableStateOf(false) }
-    val jobsRepository = remember { RepositoryProvider.jobsRepository }
+    val jobsViewModel: JobsViewModel = hiltViewModel()
+    val uiState by jobsViewModel.uiState.collectAsStateWithLifecycle()
+    var sourceJobs by remember(uiState.items) { mutableStateOf(uiState.items) }
+    val isMockFallback = uiState.simulated
     val palette = modulePalette(AppModule.EAGLE)
     val sweepTransition = rememberInfiniteTransition(label = "eagle_sweep")
     val sweepRotation by sweepTransition.animateFloat(
@@ -113,9 +116,7 @@ fun HawkEyeScreen(onBack: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        val snapshot = jobsRepository.getJobsSnapshot()
-        sourceJobs = snapshot.items
-        isMockFallback = snapshot.simulated
+        sourceJobs = uiState.items
         while (scanProgress < 100) {
             delay(60)
             scanProgress += 2

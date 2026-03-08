@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 
 from app.schemas.common import ApiResponse
 from app.schemas.dashboard import DashboardHomeData
+from app.services.demo_store import store
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["首页总览"])
 
 
-@router.get("/home", response_model=ApiResponse[DashboardHomeData])
+@router.get("/home")
 async def get_home_dashboard() -> ApiResponse[DashboardHomeData]:
     """首页聚合数据。"""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented yet")
+    return ApiResponse(data=store.dashboard())

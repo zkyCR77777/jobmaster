@@ -59,7 +59,9 @@ import com.example.client.data.ContractClause
 import com.example.client.data.ContractRiskLevel
 import com.example.client.data.guardianClauses
 import com.example.client.data.guardianScanStages
-import com.example.client.data.repository.RepositoryProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.viewmodel.ContractViewModel
 import com.example.client.ui.components.AppCard
 import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
@@ -100,17 +102,18 @@ private data class UploadedDocument(
 fun GuardianScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val palette = modulePalette(AppModule.GUARDIAN)
-    val contractRepository = remember { RepositoryProvider.contractRepository }
+    val contractViewModel: ContractViewModel = hiltViewModel()
+    val contractUiState by contractViewModel.uiState.collectAsStateWithLifecycle()
     var uploadedFile by remember { mutableStateOf<UploadedDocument?>(null) }
     var showUploadPanel by remember { mutableStateOf(true) }
     var isScanning by remember { mutableStateOf(false) }
     var scanProgress by remember { mutableIntStateOf(0) }
     var expandedId by remember { mutableStateOf<Int?>(null) }
     var highlightedId by remember { mutableStateOf<Int?>(null) }
-    var clauses by remember { mutableStateOf(guardianClauses) }
-    var summaryLabel by remember { mutableStateOf("需要关注") }
+    var clauses by remember(contractUiState.clauses) { mutableStateOf(contractUiState.clauses) }
+    var summaryLabel by remember(contractUiState.summaryLabel) { mutableStateOf(contractUiState.summaryLabel) }
     var shouldLoadDemoFromApi by remember { mutableStateOf(false) }
-    var isMockFallback by remember { mutableStateOf(false) }
+    val isMockFallback = contractUiState.simulated
     val (summaryBackground, summaryColor) = when (summaryLabel) {
         "较安全" -> Emerald100 to Emerald600
         "高风险" -> Red50 to Red600
@@ -128,7 +131,7 @@ fun GuardianScreen(onBack: () -> Unit) {
             clauses = guardianClauses
             summaryLabel = "需要关注"
             expandedId = null
-            isMockFallback = false
+            contractViewModel.reset()
         }
     }
 
@@ -141,14 +144,16 @@ fun GuardianScreen(onBack: () -> Unit) {
         isScanning = false
     }
 
-    LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi, contractRepository) {
+    LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi) {
         if (isScanning || showUploadPanel || !shouldLoadDemoFromApi) return@LaunchedEffect
-        val snapshot = contractRepository.getContractSnapshot(contractId = "demo")
-        summaryLabel = snapshot.summaryLabel
-        clauses = snapshot.clauses
-        expandedId = null
-        isMockFallback = snapshot.simulated
+        contractViewModel.loadDemoContract()
         shouldLoadDemoFromApi = false
+    }
+
+    LaunchedEffect(contractUiState.summaryLabel, contractUiState.clauses) {
+        summaryLabel = contractUiState.summaryLabel
+        clauses = contractUiState.clauses
+        expandedId = null
     }
 
     LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi, clauses) {
@@ -318,7 +323,7 @@ fun GuardianScreen(onBack: () -> Unit) {
                                 clauses = guardianClauses
                                 summaryLabel = "需要关注"
                                 expandedId = null
-                                isMockFallback = false
+                                contractViewModel.reset()
                             },
                         )
                     }
@@ -410,7 +415,7 @@ fun GuardianScreen(onBack: () -> Unit) {
                                         summaryLabel = "需要关注"
                                         expandedId = null
                                         highlightedId = null
-                                        isMockFallback = false
+                                        contractViewModel.reset()
                                     },
                                 contentAlignment = Alignment.Center,
                             ) {

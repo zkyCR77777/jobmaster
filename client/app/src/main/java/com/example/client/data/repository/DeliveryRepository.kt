@@ -4,13 +4,14 @@ import com.example.client.data.DeliveryQueueItem
 import com.example.client.data.DeliveryQueueStatus
 import com.example.client.data.phantomDeliveryQueue
 import com.example.client.data.remote.SmartPactApi
+import javax.inject.Inject
 
 data class DeliveryQueueSnapshot(
     val items: List<DeliveryQueueItem>,
     val simulated: Boolean,
 )
 
-class DeliveryRepository(
+class DeliveryRepository @Inject constructor(
     private val api: SmartPactApi,
 ) {
     suspend fun getDeliveryQueue(): DeliveryQueueSnapshot {

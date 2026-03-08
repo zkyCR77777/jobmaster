@@ -46,7 +46,9 @@ import com.example.client.data.AppModule
 import com.example.client.data.DeliveryQueueStatus
 import com.example.client.data.phantomDeliveryQueue
 import com.example.client.data.phantomResumeSteps
-import com.example.client.data.repository.RepositoryProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.viewmodel.DeliveryViewModel
 import com.example.client.ui.components.AppCard
 import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
@@ -74,12 +76,13 @@ import kotlin.math.roundToInt
 @Composable
 fun DeliveryScreen(onBack: () -> Unit) {
     val palette = modulePalette(AppModule.PHANTOM)
-    val deliveryRepository = remember { RepositoryProvider.deliveryRepository }
+    val deliveryViewModel: DeliveryViewModel = hiltViewModel()
+    val uiState by deliveryViewModel.uiState.collectAsStateWithLifecycle()
     var completedLines by remember { mutableStateOf(emptyList<String>()) }
     var currentTypingLine by remember { mutableStateOf("") }
-    var queue by remember { mutableStateOf(phantomDeliveryQueue) }
-    var shouldAutoPromoteQueue by remember { mutableStateOf(true) }
-    var isMockFallback by remember { mutableStateOf(false) }
+    var queue by remember(uiState.queue) { mutableStateOf(uiState.queue) }
+    val shouldAutoPromoteQueue = uiState.shouldAutoPromoteQueue
+    val isMockFallback = uiState.simulated
 
     LaunchedEffect(Unit) {
         phantomResumeSteps.forEach { step ->
@@ -94,12 +97,6 @@ fun DeliveryScreen(onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(deliveryRepository) {
-        val snapshot = deliveryRepository.getDeliveryQueue()
-        queue = snapshot.items
-        shouldAutoPromoteQueue = snapshot.simulated
-        isMockFallback = snapshot.simulated
-    }
 
     LaunchedEffect(shouldAutoPromoteQueue) {
         if (!shouldAutoPromoteQueue) return@LaunchedEffect

@@ -3,13 +3,14 @@ package com.example.client.data.repository
 import com.example.client.data.JobOpportunity
 import com.example.client.data.eagleJobs
 import com.example.client.data.remote.SmartPactApi
+import javax.inject.Inject
 
 data class JobsSnapshot(
     val items: List<JobOpportunity>,
     val simulated: Boolean,
 )
 
-class JobsRepository(
+class JobsRepository @Inject constructor(
     private val api: SmartPactApi,
 ) {
     suspend fun getJobsSnapshot(): JobsSnapshot {
