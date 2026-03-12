@@ -12,9 +12,9 @@
 
 **契约卫士** — 对劳动合同进行结构化解析，提取试用期、竞业限制、违约责任等关键条款，标注风险点并提供通俗解读。
 
-## 当前 Demo 交互
+## 当前实现状态
 
-客户端已完成 UI 原型与交互演示，主要页面包括：
+当前仓库已经不是纯原型，Android 客户端和 FastAPI 后端已完成首轮联调，主要页面与接口包括：
 
 - **首页**：个性化问候、求职状态总览卡片、AI 对话入口、各智能体工作动态、模块导航宫格
 - **AI 对话**：全局覆盖式浮层，支持快捷指令、上下文感知分发、消息气泡交互
@@ -23,23 +23,28 @@
 - **深网调查员**：多数据源分析进度、企业风险画像卡片
 - **契约卫士**：合同文件上传、逐条款扫描动效、风险等级摘要、条款详细解读
 
-当前所有数据为本地 mock，尚未接入真实后端与 AI 服务。
+当前状态：
+
+- Android 端业务数据已改为真实 API 驱动，不再使用本地 mock 回退
+- 后端已提供 `/api/v1/...` 路由、PostgreSQL 持久化、启动期自动建库建表与基础种子数据
+- 聊天、合同分析、企业分析目前已具备可联调结果，但部分 AI 分析仍是规则化或模板化实现，后续再继续接入外部模型与异步任务
 
 ## 项目结构
 
 ```
 job-master/
 ├── client/          Android 客户端（Kotlin + Jetpack Compose）
-├── server/          后端服务（待开发）
+├── server/          后端服务（FastAPI + PostgreSQL）
 └── docs/            项目文档
 ```
 
 ## 技术架构
 
-- **客户端**：Kotlin, Jetpack Compose, Material 3, Navigation Compose
-- **后端**：待定（端云协同架构，端侧轻量推理 + 云端深度分析）
-- **AI 能力**：多智能体协作引擎、RAG 检索增强生成、垂直领域知识库
+- **客户端**：Kotlin, Jetpack Compose, Material 3, Hilt, Retrofit
+- **后端**：FastAPI, SQLModel, PostgreSQL, Redis, Celery
+- **AI 能力**：多智能体协作入口已接入，外部 LLM / 爬虫 / 企业数据源仍在逐步完善
 
 ## 运行
 
-使用 Android Studio 打开 `client/` 目录，同步 Gradle 后连接设备运行即可。
+- Android：使用 Android Studio 打开 `client/` 目录，同步 Gradle 后连接设备运行即可。
+- 后端：进入 `server/` 目录后按 [server/README.md](/mnt/d/Desktop/job-master/server/README.md) 启动 PostgreSQL、Redis 和 FastAPI 服务。

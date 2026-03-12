@@ -3,7 +3,6 @@ package com.example.client.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.client.data.CompanyProfile
-import com.example.client.data.investigatorCompanies
 import com.example.client.data.repository.CompanyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,18 +25,18 @@ class CompanyViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            val snapshot = companyRepository.getCompaniesSnapshot()
-            _uiState.update {
-                it.copy(
-                    companies = snapshot.items,
-                    simulated = snapshot.simulated,
-                )
-            }
+            runCatching { companyRepository.getCompaniesSnapshot() }
+                .onSuccess { snapshot ->
+                    _uiState.update { it.copy(companies = snapshot.items, errorMessage = null) }
+                }
+                .onFailure {
+                    _uiState.update { state -> state.copy(errorMessage = "企业分析数据加载失败，请稍后重试。") }
+                }
         }
     }
 }
 
 data class CompanyUiState(
-    val companies: List<CompanyProfile> = investigatorCompanies,
-    val simulated: Boolean = false,
+    val companies: List<CompanyProfile> = emptyList(),
+    val errorMessage: String? = null,
 )

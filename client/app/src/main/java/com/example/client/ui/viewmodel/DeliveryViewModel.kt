@@ -3,7 +3,6 @@ package com.example.client.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.client.data.DeliveryQueueItem
-import com.example.client.data.phantomDeliveryQueue
 import com.example.client.data.repository.DeliveryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,20 +25,18 @@ class DeliveryViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            val snapshot = deliveryRepository.getDeliveryQueue()
-            _uiState.update {
-                it.copy(
-                    queue = snapshot.items,
-                    simulated = snapshot.simulated,
-                    shouldAutoPromoteQueue = snapshot.simulated,
-                )
-            }
+            runCatching { deliveryRepository.getDeliveryQueue() }
+                .onSuccess { snapshot ->
+                    _uiState.update { it.copy(queue = snapshot.items, errorMessage = null) }
+                }
+                .onFailure {
+                    _uiState.update { state -> state.copy(errorMessage = "投递数据加载失败，请稍后重试。") }
+                }
         }
     }
 }
 
 data class DeliveryUiState(
-    val queue: List<DeliveryQueueItem> = phantomDeliveryQueue,
-    val simulated: Boolean = false,
-    val shouldAutoPromoteQueue: Boolean = false,
+    val queue: List<DeliveryQueueItem> = emptyList(),
+    val errorMessage: String? = null,
 )

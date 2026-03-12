@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 
+from sqlalchemy import JSON
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Column
 
 
 class Resume(SQLModel, table=True):
@@ -23,5 +25,19 @@ class Delivery(SQLModel, table=True):
     job_id: uuid.UUID = Field(foreign_key="job.id")
     resume_id: uuid.UUID = Field(foreign_key="resume.id")
     status: str = "pending"  # pending / delivered / viewed / interview / rejected
+    note: str = ""
     delivered_at: datetime | None = None
+    updated_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class ResumeCustomizationTask(SQLModel, table=True):
+    """定制简历任务"""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    resume_id: uuid.UUID = Field(foreign_key="resume.id")
+    job_id: uuid.UUID = Field(foreign_key="job.id")
+    status: str = "processing"
+    progress: int = 0
+    current_stage: str = ""
+    stages: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.now)

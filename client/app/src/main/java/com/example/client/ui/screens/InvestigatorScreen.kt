@@ -53,13 +53,12 @@ import androidx.compose.ui.unit.dp
 import com.example.client.data.AppModule
 import com.example.client.data.CompanyProfile
 import com.example.client.data.CompanyRiskLevel
-import com.example.client.data.investigatorCompanies
 import com.example.client.data.investigatorSources
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.components.ErrorNotice
 import com.example.client.ui.viewmodel.CompanyViewModel
 import com.example.client.ui.components.AppCard
-import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
@@ -93,7 +92,6 @@ fun InvestigatorScreen(onBack: () -> Unit) {
     var progress by remember { mutableIntStateOf(0) }
     var expandedId by remember { mutableStateOf<Int?>(null) }
     val companies = uiState.companies
-    val isMockFallback = uiState.simulated
     val completedSources = remember { mutableStateListOf<String>() }
     val lowRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.LOW }
     val mediumRiskCount = companies.count { it.riskLevel == CompanyRiskLevel.MEDIUM }
@@ -127,9 +125,9 @@ fun InvestigatorScreen(onBack: () -> Unit) {
             )
         }
 
-        if (isMockFallback) {
+        uiState.errorMessage?.let { errorMessage ->
             item {
-                MockFallbackNotice(message = "企业分析 API 调用失败，当前展示本地演示数据。")
+                ErrorNotice(message = errorMessage)
             }
         }
 

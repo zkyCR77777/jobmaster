@@ -1,9 +1,12 @@
 package com.example.client.data.remote
 
+import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.Path
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Query
 
 interface SmartPactApi {
@@ -37,6 +40,12 @@ interface SmartPactApi {
     suspend fun getContractClauses(
         @Path("contractId") contractId: String,
     ): ApiEnvelope<ContractClauseListResponse>
+
+    @Multipart
+    @POST("api/v1/contracts")
+    suspend fun uploadContract(
+        @Part file: MultipartBody.Part,
+    ): ApiEnvelope<ContractTaskResponse>
 
     @POST("api/v1/chat/sessions")
     suspend fun createChatSession(): ApiEnvelope<ChatSessionCreateResponse>

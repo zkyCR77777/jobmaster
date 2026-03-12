@@ -26,13 +26,21 @@ class HomeViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val snapshot = homeRepository.getDashboardSnapshot()
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    dashboardSnapshot = snapshot,
-                )
-            }
+            runCatching { homeRepository.getDashboardSnapshot() }
+                .onSuccess { snapshot ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            dashboardSnapshot = snapshot,
+                            errorMessage = null,
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { state ->
+                        state.copy(isLoading = false, errorMessage = "首页数据加载失败，请稍后重试。")
+                    }
+                }
         }
     }
 }
@@ -40,4 +48,5 @@ class HomeViewModel @Inject constructor(
 data class HomeUiState(
     val isLoading: Boolean = true,
     val dashboardSnapshot: HomeDashboardSnapshot? = null,
+    val errorMessage: String? = null,
 )

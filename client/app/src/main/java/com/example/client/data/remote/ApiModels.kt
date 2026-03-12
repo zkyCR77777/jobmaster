@@ -123,6 +123,15 @@ data class ContractClauseListResponse(
     val items: List<ContractClauseResponse> = emptyList(),
 )
 
+data class ContractTaskResponse(
+    val id: String,
+    val file_name: String,
+    val status: String,
+    val progress: Int = 0,
+    val current_stage: String? = null,
+    val stages: List<ContractStageResponse> = emptyList(),
+)
+
 data class ContractClauseResponse(
     val id: String,
     val title: String,

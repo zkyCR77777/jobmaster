@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.database import DEFAULT_CONTRACT_ID
 from app.main import app
 
 client = TestClient(app)
@@ -62,9 +63,10 @@ def test_company_reports_returns_list() -> None:
     assert body['data']['items'][0]['risk_level'] in {'low', 'medium', 'high'}
 
 
-def test_contract_demo_returns_summary_and_clauses() -> None:
-    summary_response = client.get('/api/v1/contracts/demo')
-    clauses_response = client.get('/api/v1/contracts/demo/clauses')
+def test_contract_returns_summary_and_clauses() -> None:
+    contract_id = str(DEFAULT_CONTRACT_ID)
+    summary_response = client.get(f'/api/v1/contracts/{contract_id}')
+    clauses_response = client.get(f'/api/v1/contracts/{contract_id}/clauses')
 
     assert summary_response.status_code == 200
     assert clauses_response.status_code == 200

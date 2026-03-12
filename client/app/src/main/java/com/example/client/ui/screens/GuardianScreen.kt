@@ -57,13 +57,12 @@ import androidx.compose.ui.unit.dp
 import com.example.client.data.AppModule
 import com.example.client.data.ContractClause
 import com.example.client.data.ContractRiskLevel
-import com.example.client.data.guardianClauses
 import com.example.client.data.guardianScanStages
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.components.ErrorNotice
 import com.example.client.ui.viewmodel.ContractViewModel
 import com.example.client.ui.components.AppCard
-import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
@@ -112,8 +111,9 @@ fun GuardianScreen(onBack: () -> Unit) {
     var highlightedId by remember { mutableStateOf<Int?>(null) }
     var clauses by remember(contractUiState.clauses) { mutableStateOf(contractUiState.clauses) }
     var summaryLabel by remember(contractUiState.summaryLabel) { mutableStateOf(contractUiState.summaryLabel) }
-    var shouldLoadDemoFromApi by remember { mutableStateOf(false) }
-    val isMockFallback = contractUiState.simulated
+    var shouldLoadSampleContract by remember { mutableStateOf(false) }
+    var pendingUploadName by remember { mutableStateOf<String?>(null) }
+    var pendingUploadBytes by remember { mutableStateOf<ByteArray?>(null) }
     val (summaryBackground, summaryColor) = when (summaryLabel) {
         "较安全" -> Emerald100 to Emerald600
         "高风险" -> Red50 to Red600
@@ -123,13 +123,19 @@ fun GuardianScreen(onBack: () -> Unit) {
     val filePicker = rememberLauncherForActivityResult(contract = OpenDocument()) { uri: Uri? ->
         val file = uri?.let { context.resolveDocument(it) }
         if (file != null) {
+            val bytes = uri?.let { selectedUri ->
+                context.contentResolver.openInputStream(selectedUri)?.use { it.readBytes() }
+            }
+            if (bytes == null) return@rememberLauncherForActivityResult
             uploadedFile = file
             showUploadPanel = false
             isScanning = true
             scanProgress = 0
-            shouldLoadDemoFromApi = false
-            clauses = guardianClauses
-            summaryLabel = "需要关注"
+            shouldLoadSampleContract = false
+            pendingUploadName = file.name
+            pendingUploadBytes = bytes
+            clauses = emptyList()
+            summaryLabel = "分析中"
             expandedId = null
             contractViewModel.reset()
         }
@@ -144,10 +150,19 @@ fun GuardianScreen(onBack: () -> Unit) {
         isScanning = false
     }
 
-    LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi) {
-        if (isScanning || showUploadPanel || !shouldLoadDemoFromApi) return@LaunchedEffect
-        contractViewModel.loadDemoContract()
-        shouldLoadDemoFromApi = false
+    LaunchedEffect(isScanning, showUploadPanel, shouldLoadSampleContract, pendingUploadName, pendingUploadBytes) {
+        if (isScanning || showUploadPanel) return@LaunchedEffect
+        when {
+            shouldLoadSampleContract -> {
+                contractViewModel.loadSampleContract()
+                shouldLoadSampleContract = false
+            }
+            pendingUploadName != null && pendingUploadBytes != null -> {
+                contractViewModel.uploadContract(pendingUploadName!!, pendingUploadBytes!!)
+                pendingUploadName = null
+                pendingUploadBytes = null
+            }
+        }
     }
 
     LaunchedEffect(contractUiState.summaryLabel, contractUiState.clauses) {
@@ -156,8 +171,8 @@ fun GuardianScreen(onBack: () -> Unit) {
         expandedId = null
     }
 
-    LaunchedEffect(isScanning, showUploadPanel, shouldLoadDemoFromApi, clauses) {
-        if (isScanning || showUploadPanel || shouldLoadDemoFromApi) return@LaunchedEffect
+    LaunchedEffect(isScanning, showUploadPanel, shouldLoadSampleContract, clauses) {
+        if (isScanning || showUploadPanel || shouldLoadSampleContract) return@LaunchedEffect
         val riskyIds = clauses.filter { it.riskLevel != ContractRiskLevel.SAFE }.map { it.id }
         riskyIds.forEach { id ->
             highlightedId = id
@@ -187,9 +202,9 @@ fun GuardianScreen(onBack: () -> Unit) {
             )
         }
 
-        if (isMockFallback) {
+        contractUiState.errorMessage?.let { errorMessage ->
             item {
-                MockFallbackNotice(message = "合同分析 API 调用失败，当前展示本地演示数据。")
+                ErrorNotice(message = errorMessage)
             }
         }
 
@@ -308,8 +323,8 @@ fun GuardianScreen(onBack: () -> Unit) {
                         )
 
                         UploadActionCard(
-                            title = "演示文档",
-                            subtitle = "查看分析示例",
+                            title = "示例合同",
+                            subtitle = "查看样例结果",
                             icon = Icons.Filled.Description,
                             background = Pink100,
                             tint = Pink600,
@@ -319,9 +334,11 @@ fun GuardianScreen(onBack: () -> Unit) {
                                 showUploadPanel = false
                                 isScanning = true
                                 scanProgress = 0
-                                shouldLoadDemoFromApi = true
-                                clauses = guardianClauses
-                                summaryLabel = "需要关注"
+                                shouldLoadSampleContract = true
+                                pendingUploadName = null
+                                pendingUploadBytes = null
+                                clauses = emptyList()
+                                summaryLabel = "分析中"
                                 expandedId = null
                                 contractViewModel.reset()
                             },
@@ -410,9 +427,11 @@ fun GuardianScreen(onBack: () -> Unit) {
                                         uploadedFile = null
                                         showUploadPanel = true
                                         scanProgress = 0
-                                        shouldLoadDemoFromApi = false
-                                        clauses = guardianClauses
-                                        summaryLabel = "需要关注"
+                                        shouldLoadSampleContract = false
+                                        pendingUploadName = null
+                                        pendingUploadBytes = null
+                                        clauses = emptyList()
+                                        summaryLabel = "分析中"
                                         expandedId = null
                                         highlightedId = null
                                         contractViewModel.reset()

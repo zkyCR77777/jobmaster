@@ -3,7 +3,6 @@ package com.example.client.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.client.data.JobOpportunity
-import com.example.client.data.eagleJobs
 import com.example.client.data.repository.JobsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,18 +25,18 @@ class JobsViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            val snapshot = jobsRepository.getJobsSnapshot()
-            _uiState.update {
-                it.copy(
-                    items = snapshot.items,
-                    simulated = snapshot.simulated,
-                )
-            }
+            runCatching { jobsRepository.getJobsSnapshot() }
+                .onSuccess { snapshot ->
+                    _uiState.update { it.copy(items = snapshot.items, errorMessage = null) }
+                }
+                .onFailure {
+                    _uiState.update { state -> state.copy(errorMessage = "职位数据加载失败，请稍后重试。") }
+                }
         }
     }
 }
 
 data class JobsUiState(
-    val items: List<JobOpportunity> = eagleJobs,
-    val simulated: Boolean = false,
+    val items: List<JobOpportunity> = emptyList(),
+    val errorMessage: String? = null,
 )

@@ -19,20 +19,10 @@ import kotlinx.coroutines.launch
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(
-        ChatUiState(
-            messages = listOf(
-                ChatMessage(
-                    id = 1L,
-                    sender = ChatSender.AGENT,
-                    content = DEFAULT_WELCOME,
-                )
-            )
-        )
-    )
+    private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    private var nextMessageId = 2L
+    private var nextMessageId = 1L
 
     fun updateInput(value: String) {
         _uiState.update { it.copy(inputValue = value) }
@@ -60,25 +50,40 @@ class ChatViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val snapshot = chatRepository.sendMessage(
-                content = content,
-                currentModule = targetModule,
-                sessionId = _uiState.value.sessionId,
-            )
-            _uiState.update {
-                it.copy(
-                    sessionId = snapshot.sessionId ?: it.sessionId,
-                    activeAgent = snapshot.detectedModule,
-                    isMockFallback = snapshot.simulated,
+            runCatching {
+                chatRepository.sendMessage(
+                    content = content,
+                    currentModule = targetModule,
+                    sessionId = _uiState.value.sessionId,
                 )
-            }
+            }.onSuccess { snapshot ->
+                _uiState.update {
+                    it.copy(
+                        sessionId = snapshot.sessionId ?: it.sessionId,
+                        activeAgent = snapshot.detectedModule,
+                        errorMessage = null,
+                    )
+                }
 
-            val replies = snapshot.assistantMessages.ifEmpty {
-                listOf("当前展示演示回复，请稍后重试。")
-            }
-            replies.forEach { reply ->
-                delay(220)
-                appendAssistantMessage(reply, snapshot.detectedModule)
+                snapshot.welcomeMessage
+                    ?.takeIf { welcome -> _uiState.value.messages.none { it.content == welcome } }
+                    ?.let { welcome ->
+                        delay(120)
+                        appendAssistantMessage(welcome, snapshot.detectedModule)
+                    }
+
+                snapshot.assistantMessages.forEach { reply ->
+                    delay(220)
+                    appendAssistantMessage(reply, snapshot.detectedModule)
+                }
+            }.onFailure {
+                _uiState.update { state ->
+                    state.copy(
+                        isTyping = false,
+                        errorMessage = "AI 对话服务调用失败，请稍后重试。",
+                    )
+                }
+                return@launch
             }
             _uiState.update { it.copy(isTyping = false) }
         }
@@ -119,11 +124,6 @@ class ChatViewModel @Inject constructor(
         nextMessageId += 1
         return value
     }
-
-    companion object {
-        private const val DEFAULT_WELCOME =
-            "你好！我是求职高手 AI 助手。你可以用自然语言告诉我你的需求，我会调度合适的 Agent 来帮助你。试试说“帮我找一份产品经理的工作”或“分析这份 offer”。"
-    }
 }
 
 data class ChatUiState(
@@ -132,5 +132,5 @@ data class ChatUiState(
     val isTyping: Boolean = false,
     val activeAgent: AppModule? = null,
     val sessionId: String? = null,
-    val isMockFallback: Boolean = false,
+    val errorMessage: String? = null,
 )

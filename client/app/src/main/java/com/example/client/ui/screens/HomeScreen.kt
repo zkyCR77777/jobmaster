@@ -50,12 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.client.data.AppModule
 import com.example.client.data.greetingForHour
-import com.example.client.data.homeAgents
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.client.ui.viewmodel.HomeViewModel
+import com.example.client.ui.components.ErrorNotice
 import com.example.client.ui.components.GradientIcon
-import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
 import com.example.client.ui.components.homeAgentIcon
@@ -147,8 +146,7 @@ private fun AppHomeContent(
     val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val localGreeting = remember(hour) { greetingForHour(hour) }
     val greeting = dashboardSnapshot?.greeting ?: localGreeting
-    val displayAgents = dashboardSnapshot?.agentFeed?.ifEmpty { homeAgents } ?: homeAgents
-    val isMockFallback = dashboardSnapshot?.simulated == true
+    val displayAgents = dashboardSnapshot?.agentFeed.orEmpty()
     var activeIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(displayAgents.size) {
@@ -208,7 +206,7 @@ private fun AppHomeContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = (dashboardSnapshot?.notificationCount ?: 3).toString(),
+                            text = (dashboardSnapshot?.notificationCount ?: 0).toString(),
                             color = White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -218,9 +216,9 @@ private fun AppHomeContent(
             }
         }
 
-        if (isMockFallback) {
+        uiState.errorMessage?.let { errorMessage ->
             item {
-                MockFallbackNotice(message = "首页 API 调用失败，当前展示本地演示数据。")
+                ErrorNotice(message = errorMessage)
             }
         }
 
@@ -256,11 +254,11 @@ private fun AppHomeContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        HomeHeroStat(value = (dashboardSnapshot?.heroStats?.newJobsToday ?: 24).toString(), label = "今日新发现职位")
+                        HomeHeroStat(value = (dashboardSnapshot?.heroStats?.newJobsToday ?: 0).toString(), label = "今日新发现职位")
                         HomeHeroDivider()
-                        HomeHeroStat(value = "${dashboardSnapshot?.heroStats?.matchSuccessRate ?: 89}%", label = "匹配成功率")
+                        HomeHeroStat(value = "${dashboardSnapshot?.heroStats?.matchSuccessRate ?: 0}%", label = "匹配成功率")
                         HomeHeroDivider()
-                        HomeHeroStat(value = (dashboardSnapshot?.heroStats?.interviewInvites ?: 5).toString(), label = "面试邀请")
+                        HomeHeroStat(value = (dashboardSnapshot?.heroStats?.interviewInvites ?: 0).toString(), label = "面试邀请")
                     }
                 }
             }

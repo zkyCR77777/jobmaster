@@ -44,13 +44,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.client.data.AppModule
 import com.example.client.data.DeliveryQueueStatus
-import com.example.client.data.phantomDeliveryQueue
 import com.example.client.data.phantomResumeSteps
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.components.ErrorNotice
 import com.example.client.ui.viewmodel.DeliveryViewModel
 import com.example.client.ui.components.AppCard
-import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.ProgressBar
@@ -81,8 +80,6 @@ fun DeliveryScreen(onBack: () -> Unit) {
     var completedLines by remember { mutableStateOf(emptyList<String>()) }
     var currentTypingLine by remember { mutableStateOf("") }
     var queue by remember(uiState.queue) { mutableStateOf(uiState.queue) }
-    val shouldAutoPromoteQueue = uiState.shouldAutoPromoteQueue
-    val isMockFallback = uiState.simulated
 
     LaunchedEffect(Unit) {
         phantomResumeSteps.forEach { step ->
@@ -94,25 +91,6 @@ fun DeliveryScreen(onBack: () -> Unit) {
             completedLines = completedLines + step
             currentTypingLine = ""
             delay(520)
-        }
-    }
-
-
-    LaunchedEffect(shouldAutoPromoteQueue) {
-        if (!shouldAutoPromoteQueue) return@LaunchedEffect
-        while (true) {
-            delay(2_000)
-            var promoting = true
-            queue = queue.map { item ->
-                when {
-                    item.status == DeliveryQueueStatus.DELIVERING -> item.copy(status = DeliveryQueueStatus.DELIVERED)
-                    item.status == DeliveryQueueStatus.PENDING && promoting -> {
-                        promoting = false
-                        item.copy(status = DeliveryQueueStatus.DELIVERING)
-                    }
-                    else -> item
-                }
-            }
         }
     }
 
@@ -135,9 +113,9 @@ fun DeliveryScreen(onBack: () -> Unit) {
             )
         }
 
-        if (isMockFallback) {
+        uiState.errorMessage?.let { errorMessage ->
             item {
-                MockFallbackNotice(message = "投递 API 调用失败，当前展示本地演示数据。")
+                ErrorNotice(message = errorMessage)
             }
         }
 

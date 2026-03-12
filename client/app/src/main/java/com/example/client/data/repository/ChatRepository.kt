@@ -2,7 +2,6 @@ package com.example.client.data.repository
 
 import com.example.client.BuildConfig
 import com.example.client.data.AppModule
-import com.example.client.data.simulatedResponses
 import com.example.client.data.remote.ChatSendMessageRequest
 import com.example.client.data.remote.SmartPactApi
 import com.google.gson.JsonObject
@@ -20,7 +19,6 @@ data class ChatReplySnapshot(
     val detectedModule: AppModule,
     val assistantMessages: List<String>,
     val welcomeMessage: String? = null,
-    val simulated: Boolean,
 )
 
 class ChatRepository @Inject constructor(
@@ -35,45 +33,32 @@ class ChatRepository @Inject constructor(
         var resolvedSessionId = sessionId
         var welcomeMessage: String? = null
 
-        return runCatching {
-            if (resolvedSessionId.isNullOrBlank()) {
-                val session = api.createChatSession().data
-                resolvedSessionId = session.session_id
-                welcomeMessage = session.welcome_message.takeIf { it.isNotBlank() }
-            }
-
-            val currentSessionId = resolvedSessionId ?: error("session_id is required")
-            val sendResult = api.sendChatMessage(
-                sessionId = currentSessionId,
-                payload = ChatSendMessageRequest(
-                    content = content,
-                    current_module = currentModule?.id,
-                ),
-            ).data
-
-            val detectedModule = AppModule.fromId(sendResult.detected_module)
-                ?: currentModule
-                ?: AppModule.EAGLE
-
-            ChatReplySnapshot(
-                sessionId = currentSessionId,
-                messageId = sendResult.message_id,
-                detectedModule = detectedModule,
-                assistantMessages = loadLatestAssistantMessages(currentSessionId),
-                welcomeMessage = welcomeMessage,
-                simulated = false,
-            )
-        }.getOrElse {
-            val detectedModule = resolveModule(content = content, currentModule = currentModule)
-            ChatReplySnapshot(
-                sessionId = resolvedSessionId,
-                detectedModule = detectedModule,
-                assistantMessages = simulatedResponses[detectedModule].orEmpty()
-                    .ifEmpty { listOf("当前展示演示回复，请稍后重试。") },
-                welcomeMessage = welcomeMessage,
-                simulated = true,
-            )
+        if (resolvedSessionId.isNullOrBlank()) {
+            val session = api.createChatSession().data
+            resolvedSessionId = session.session_id
+            welcomeMessage = session.welcome_message.takeIf { it.isNotBlank() }
         }
+
+        val currentSessionId = resolvedSessionId ?: error("session_id is required")
+        val sendResult = api.sendChatMessage(
+            sessionId = currentSessionId,
+            payload = ChatSendMessageRequest(
+                content = content,
+                current_module = currentModule?.id,
+            ),
+        ).data
+
+        val detectedModule = AppModule.fromId(sendResult.detected_module)
+            ?: currentModule
+            ?: AppModule.EAGLE
+
+        return ChatReplySnapshot(
+            sessionId = currentSessionId,
+            messageId = sendResult.message_id,
+            detectedModule = detectedModule,
+            assistantMessages = loadLatestAssistantMessages(currentSessionId),
+            welcomeMessage = welcomeMessage,
+        )
     }
 
     suspend fun loadLatestAssistantMessages(sessionId: String): List<String> {
@@ -141,36 +126,6 @@ class ChatRepository @Inject constructor(
             }
         }
     }
-
-    fun buildMockSnapshot(
-        content: String,
-        currentModule: AppModule?,
-        sessionId: String? = null,
-    ): ChatReplySnapshot {
-        val detectedModule = resolveModule(content = content, currentModule = currentModule)
-        return ChatReplySnapshot(
-            sessionId = sessionId,
-            detectedModule = detectedModule,
-            assistantMessages = simulatedResponses[detectedModule].orEmpty()
-                .ifEmpty { listOf("当前展示演示回复，请稍后重试。") },
-            simulated = true,
-        )
-    }
-
-    private fun resolveModule(
-        content: String,
-        currentModule: AppModule?,
-    ): AppModule {
-        return when {
-            content.contains("投递") || content.contains("简历") -> AppModule.PHANTOM
-            content.contains("调查") || content.contains("公司") || content.contains("背景") -> AppModule.INVESTIGATOR
-            content.contains("合同") || content.contains("offer") || content.contains("条款") -> AppModule.GUARDIAN
-            content.contains("找工作") || content.contains("职位") || content.contains("招聘") -> AppModule.EAGLE
-            currentModule != null -> currentModule
-            else -> AppModule.EAGLE
-        }
-    }
-
     private fun parseSsePayload(
         event: String,
         payload: String,

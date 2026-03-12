@@ -37,3 +37,4 @@ server/.cache/
 # Docs build
 docs/_build/
 SKILL.md
+server/uv.lock

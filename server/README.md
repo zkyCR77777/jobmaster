@@ -78,9 +78,18 @@ docker compose up --build
 
 ## 当前开发状态
 
-- 路由与 Schema 已搭好骨架，`/health` 可正常返回。
-- 业务接口当前多数仍返回 `501 Not implemented yet`（正在逐步实现）。
-- 客户端已按这些路由联调，后端实现完成后可直接去掉大量 mock 回退。
+- `/health`、`/api/v1/dashboard/home`、`/api/v1/auth/*`、`/api/v1/jobs*`、`/api/v1/deliveries*`、`/api/v1/company-reports*`、`/api/v1/contracts*`、`/api/v1/chat*` 已可用。
+- 启动时会自动执行数据库准备流程：建库、建表、补字段、创建上传目录、初始化基础种子数据。
+- Android 客户端当前已走真实 API，不再依赖本地 mock 回退。
+- 当前仍在持续完善的部分主要是：外部 LLM 接入、真实爬虫抓取、企业第三方数据源、Celery 异步任务调度。
+
+### 当前默认测试数据
+
+- 默认测试用户：`test@example.com`
+- 默认密码：`12345678`
+- 默认数据库：`job_master`
+
+如果当前 PostgreSQL 账号具备 `CREATE DATABASE` 权限，服务启动时会自动创建缺失数据库。
 
 ## 常见问题
 

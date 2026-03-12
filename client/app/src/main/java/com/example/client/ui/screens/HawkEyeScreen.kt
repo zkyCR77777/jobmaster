@@ -61,12 +61,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import com.example.client.data.AppModule
-import com.example.client.data.eagleJobs
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.client.ui.components.ErrorNotice
 import com.example.client.ui.viewmodel.JobsViewModel
 import com.example.client.ui.components.AppCard
-import com.example.client.ui.components.MockFallbackNotice
 import com.example.client.ui.components.ModuleHeader
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.SectionHeader
@@ -102,7 +101,6 @@ fun HawkEyeScreen(onBack: () -> Unit) {
     val jobsViewModel: JobsViewModel = hiltViewModel()
     val uiState by jobsViewModel.uiState.collectAsStateWithLifecycle()
     var sourceJobs by remember(uiState.items) { mutableStateOf(uiState.items) }
-    val isMockFallback = uiState.simulated
     val palette = modulePalette(AppModule.EAGLE)
     val sweepTransition = rememberInfiniteTransition(label = "eagle_sweep")
     val sweepRotation by sweepTransition.animateFloat(
@@ -147,9 +145,9 @@ fun HawkEyeScreen(onBack: () -> Unit) {
             )
         }
 
-        if (isMockFallback) {
+        uiState.errorMessage?.let { errorMessage ->
             item {
-                MockFallbackNotice(message = "职位 API 调用失败，当前展示本地演示数据。")
+                ErrorNotice(message = errorMessage)
             }
         }
 

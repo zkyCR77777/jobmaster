@@ -1,25 +1,26 @@
 # 求职高手 Smart Pact API 接口文档 v1
 
-- 文档版本：`v1-draft`
-- 文档状态：`草案 / 待后端实现对齐`
+- 文档版本：`v1`
+- 文档状态：`已与当前仓库实现完成首轮对齐`
 - 编写日期：`2026-03-07`
-- 适用范围：`MVP 阶段 Android 客户端接入真实 API 前的接口契约定义`
+- 更新日期：`2026-03-12`
+- 适用范围：`当前 Android 客户端与 FastAPI 后端的接口基线`
 
 ## 1. 文档目的
 
 本文档基于以下内容整理：
 
 - 产品需求文档 `docs/smart-pact-system-prd.md`
-- 当前 Android 原型中的页面结构与 mock 数据模型
-- 当前 FastAPI 后端骨架路由与 SQLModel 数据模型
+- 当前 Android 客户端页面结构与数据层实现
+- 当前 FastAPI 路由、SQLModel 数据模型与 PostgreSQL 持久化实现
 
-本文档的目标不是描述“当前已实现接口”，而是定义一版**后端与 Android 客户端后续共同遵循的目标接口契约**。
+本文档的目标是描述当前仓库中已经落地的接口基线，并标记仍待继续完善的能力边界。
 
 当前仓库现状：
 
-- Android 客户端仍以本地 mock 驱动为主
-- 后端已有 FastAPI 路由骨架，但大多为占位实现
-- 因此需要先统一接口命名、资源边界、请求/响应结构，再开始替换客户端 mock
+- Android 客户端业务数据已走真实 API，不再使用本地 mock 回退
+- 后端主路由已统一为 `/api/v1/...`，并已接入 PostgreSQL
+- 合同分析、企业分析、聊天回复当前可返回真实持久化结果，但部分分析逻辑仍属于 MVP 阶段的规则化实现
 
 ## 2. 设计原则
 
@@ -28,7 +29,7 @@
 - API 基础前缀：`/api/v1`
 - 健康检查保留：`/health`
 
-说明：当前后端骨架使用的是 `/api/jobs`、`/api/delivery`、`/api/company`、`/api/contract`、`/api/chat`。正式实现阶段建议统一迁移到带版本号的 `/api/v1/...`。
+说明：当前后端已统一使用带版本号的 `/api/v1/...` 路由。
 
 ### 2.2 资源命名
 
@@ -782,81 +783,59 @@ data: {"message_id":"uuid"}
 
 ## 13. Android 页面到接口映射
 
-为方便后续替换 mock，建议按页面拆解接入：
+当前 Android 页面与接口映射如下：
 
-| 页面 | 当前主要 mock 内容 | 建议替换接口 |
+| 页面 | 当前真实数据来源 | 已接入接口 |
 |---|---|---|
-| 首页 | 问候语、通知数、Hero 统计、模块卡片、动态列表 | `GET /api/v1/dashboard/home` |
-| AI 对话 | 快捷指令、消息历史、模拟回复 | `POST /api/v1/chat/sessions`、`GET /api/v1/chat/sessions/{session_id}/messages`、`POST /api/v1/chat/sessions/{session_id}/messages`、`GET /api/v1/chat/sessions/{session_id}/stream` |
-| 鹰眼猎手 | 岗位列表、匹配度、标签 | `GET /api/v1/jobs`、`GET /api/v1/jobs/{job_id}`、`POST /api/v1/jobs/{job_id}/match` |
-| 幻影投递官 | 简历优化步骤、投递队列、统计 | `POST /api/v1/resumes`、`POST /api/v1/resumes/{resume_id}/customizations`、`GET /api/v1/resume-customizations/{customization_id}`、`GET /api/v1/deliveries`、`GET /api/v1/deliveries/stats` |
-| 深网调查员 | 数据源进度、企业风险画像 | `POST /api/v1/company-reports`、`GET /api/v1/company-reports`、`GET /api/v1/company-reports/{report_id}` |
-| 契约卫士 | 文件上传、解析进度、风险摘要、条款详解 | `POST /api/v1/contracts`、`GET /api/v1/contracts/{contract_id}`、`GET /api/v1/contracts/{contract_id}/clauses`、`GET /api/v1/contracts/{contract_id}/report` |
+| 首页 | PostgreSQL 聚合统计 | `GET /api/v1/dashboard/home` |
+| AI 对话 | 数据库会话与消息记录，SSE 流输出 | `POST /api/v1/chat/sessions`、`GET /api/v1/chat/sessions/{session_id}/messages`、`POST /api/v1/chat/sessions/{session_id}/messages`、`GET /api/v1/chat/sessions/{session_id}/stream` |
+| 鹰眼猎手 | PostgreSQL 岗位表 | `GET /api/v1/jobs`、`GET /api/v1/jobs/{job_id}`、`POST /api/v1/jobs/{job_id}/match` |
+| 幻影投递官 | PostgreSQL 简历、投递、定制任务 | `POST /api/v1/resumes`、`GET /api/v1/resumes`、`POST /api/v1/resumes/{resume_id}/customizations`、`GET /api/v1/resume-customizations/{customization_id}`、`GET /api/v1/deliveries`、`GET /api/v1/deliveries/stats` |
+| 深网调查员 | PostgreSQL 企业画像 | `POST /api/v1/company-reports`、`GET /api/v1/company-reports`、`GET /api/v1/company-reports/{report_id}` |
+| 契约卫士 | 文件上传 + PostgreSQL 合同分析结果 | `POST /api/v1/contracts`、`GET /api/v1/contracts/{contract_id}`、`GET /api/v1/contracts/{contract_id}/clauses`、`GET /api/v1/contracts/{contract_id}/report` |
 
-## 14. 当前后端骨架与目标契约的主要差异
+## 14. 当前实现与目标能力的主要差异
 
-### 14.1 路由层差异
+### 14.1 已完成的对齐
 
-当前骨架：
+- 路由已统一收敛到 `/api/v1/...`
+- 统一响应包裹、分页结构、UUID 主键已落地
+- Android 客户端已按当前接口完成首轮对接
+- PostgreSQL 已作为主数据源接入岗位、企业、投递、合同、聊天模块
 
-- `/api/jobs`
-- `/api/delivery`
-- `/api/company`
-- `/api/contract`
-- `/api/chat`
+### 14.2 仍待继续完善的部分
 
-建议目标：
-
-- `/api/v1/jobs`
-- `/api/v1/resumes`
-- `/api/v1/deliveries`
-- `/api/v1/company-reports`
-- `/api/v1/contracts`
-- `/api/v1/chat/sessions`
-- `/api/v1/dashboard/home`
-
-### 14.2 模型层差异
-
-后续后端实现前建议先补齐这些 DTO / Schema：
-
-- 岗位列表项：补 `match_score`、`is_new`、`published_at`
-- 投递状态：统一 `delivering / offer / written_test` 等枚举
-- 企业分析详情：补 `rating`、`growth`、`salary_range`、`risks[]`、`positives[]`
-- 合同条款：从通用 `analysis_result` JSON 中拆出稳定条款结构
-- 聊天：增加 `chat_session`、`chat_message` 概念
-- 首页：增加聚合返回 DTO
+- 聊天回复当前以规则化生成和数据库持久化为主，外部 LLM 能力仍待接入
+- 企业风险数据与岗位抓取仍以种子数据和手工写入为主，真实第三方数据源待补
+- 合同解析目前已支持上传、保存和结果查询，但 OCR / 文档结构化解析仍待增强
+- Celery / Redis 已预留，但异步任务链路还需要进一步落地
 
 ## 15. 推荐实施顺序
 
-### 阶段 1：先固化后端契约
+### 阶段 1：继续补真实业务能力
 
-- 定义 `schemas/` 下的请求与响应模型
-- 在 FastAPI 中明确每个接口的 `response_model`
-- 先把 OpenAPI 文档跑起来，再进入客户端对接
+- 接入外部 LLM，替换聊天与合同分析中的规则化回复
+- 接入真实岗位抓取源与企业第三方数据源
+- 让合同、企业、简历定制任务进入异步任务链路
 
-### 阶段 2：优先接入高价值页面
+### 阶段 2：加强工程化
 
-建议优先级：
+- 增加接口测试、服务测试与数据迁移管理
+- 明确鉴权策略，把固定测试用户逐步替换为真实登录态
+- 补齐日志、监控和错误追踪
 
-1. 首页聚合接口
-2. 岗位列表与详情
-3. 企业分析
-4. 合同解析
-5. AI 对话
-6. 简历与投递
+### 阶段 3：优化客户端体验
 
-### 阶段 3：替换客户端 mock
-
-- 保留 UI 动效相关本地状态
-- 替换业务数据来源为 Repository + API
-- 页面改为“加载中 / 成功 / 失败”三态
+- 保留必要的界面动效
+- 补齐真实加载、失败、重试与空状态
+- 继续收敛与真实业务无关的演示交互
 
 ## 16. 说明
 
-本文档是当前项目进入“Android mock 改真实 API”前的接口基线。
+本文档描述的是当前仓库的接口基线，而不是纯目标草案。
 
 下一步建议：
 
-- 先根据本文档补后端 `schemas`
-- 再统一 FastAPI 路由命名与返回结构
-- 最后开始 Android 数据层接入与页面逐步替换
+- 先补真实 AI / 爬虫 / 第三方数据源
+- 再完善异步任务链路
+- 最后补齐测试、文档和交付质量

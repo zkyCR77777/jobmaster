@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "求职高手"
     debug: bool = False
 
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/job_master"
+    database_url: str = "postgresql+asyncpg://postgres:123456@localhost:5432/job_master"
     redis_url: str = "redis://localhost:6379/0"
 
     secret_key: str = "change-me-in-production"

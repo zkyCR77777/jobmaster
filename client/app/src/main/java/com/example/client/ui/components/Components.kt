@@ -477,8 +477,8 @@ fun chatFallbackIcon(): ImageVector = Icons.Filled.AutoAwesome
 fun documentIcon(): ImageVector = Icons.Filled.Description
 
 @Composable
-fun MockFallbackNotice(
-    message: String = "网络或服务异常，当前展示本地演示数据（Mock）。",
+fun ErrorNotice(
+    message: String = "网络或服务异常，请稍后重试。",
     modifier: Modifier = Modifier,
 ) {
     Row(

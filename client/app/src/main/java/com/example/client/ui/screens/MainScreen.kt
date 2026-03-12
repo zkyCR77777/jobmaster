@@ -61,7 +61,7 @@ import com.example.client.data.chatQuickCommands
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.client.ui.viewmodel.ChatViewModel
-import com.example.client.ui.components.MockFallbackNotice
+import com.example.client.ui.components.ErrorNotice
 import com.example.client.ui.components.NeutralInputCircle
 import com.example.client.ui.components.PillTag
 import com.example.client.ui.components.TypingDots
@@ -96,7 +96,6 @@ fun AiChatOverlay(
     val inputValue = uiState.inputValue
     val isTyping = uiState.isTyping
     val activeAgent = uiState.activeAgent ?: currentModule
-    val isMockFallback = uiState.isMockFallback
     val listState = rememberLazyListState()
 
     LaunchedEffect(currentModule) {
@@ -193,9 +192,9 @@ fun AiChatOverlay(
                         .background(AppBorder),
                 )
 
-                if (isMockFallback) {
-                    MockFallbackNotice(
-                        message = "AI 对话服务调用失败，当前回复来自本地演示数据。",
+                uiState.errorMessage?.let { errorMessage ->
+                    ErrorNotice(
+                        message = errorMessage,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     )
                 }
