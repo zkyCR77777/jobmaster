@@ -325,72 +325,88 @@ private fun AppHomeContent(
         }
 
         item {
-            val activeAgent = displayAgents[activeIndex]
-            val palette = modulePalette(activeAgent.module)
+            if (displayAgents.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Slate100)
+                        .padding(horizontal = 16.dp, vertical = 18.dp),
+                ) {
+                    Text(
+                        text = "智能体动态加载中...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppTextSecondary,
+                    )
+                }
+            } else {
+                val activeAgent = displayAgents[activeIndex.coerceIn(0, displayAgents.lastIndex)]
+                val palette = modulePalette(activeAgent.module)
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Slate100)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Column {
-                    Crossfade(targetState = activeAgent, label = "home_agent_preview") { agent ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(palette.accentSurface),
-                                contentAlignment = Alignment.Center,
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Slate100)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                ) {
+                    Column {
+                        Crossfade(targetState = activeAgent, label = "home_agent_preview") { agent ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                Icon(
-                                    imageVector = homeAgentIcon(agent.module),
-                                    contentDescription = null,
-                                    tint = palette.accent,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = agent.module.title,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = AppTextPrimary,
-                                )
-                                Text(
-                                    text = agent.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = AppTextSecondary,
-                                )
-                            }
-
-                            PillTag(
-                                text = agent.stats,
-                                backgroundColor = palette.accentSoft,
-                                contentColor = palette.accent,
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            displayAgents.forEachIndexed { index, _ ->
                                 Box(
                                     modifier = Modifier
-                                        .size(width = if (index == activeIndex) 16.dp else 6.dp, height = 6.dp)
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(if (index == activeIndex) AppPrimary else Slate300),
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(palette.accentSurface),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = homeAgentIcon(agent.module),
+                                        contentDescription = null,
+                                        tint = palette.accent,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = agent.module.title,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = AppTextPrimary,
+                                    )
+                                    Text(
+                                        text = agent.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = AppTextSecondary,
+                                    )
+                                }
+
+                                PillTag(
+                                    text = agent.stats,
+                                    backgroundColor = palette.accentSoft,
+                                    contentColor = palette.accent,
                                 )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                displayAgents.forEachIndexed { index, _ ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = if (index == activeIndex) 16.dp else 6.dp, height = 6.dp)
+                                            .clip(RoundedCornerShape(999.dp))
+                                            .background(if (index == activeIndex) AppPrimary else Slate300),
+                                    )
+                                }
                             }
                         }
                     }

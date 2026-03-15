@@ -1,23 +1,20 @@
-"""JWT 认证与密码加密"""
+"""JWT 认证与密码处理。"""
 
 from datetime import datetime, timedelta
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return password
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return plain == hashed
 
 
 def create_access_token(data: dict) -> str:

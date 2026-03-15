@@ -15,7 +15,6 @@ dependencies = [
     "celery>=5.4",
     # 认证
     "python-jose[cryptography]>=3.3",
-    "passlib[bcrypt]>=1.7",
     # AI
     "langchain>=0.3",
     "langchain-community>=0.3",
