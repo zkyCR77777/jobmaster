@@ -1,0 +1,17 @@
+fastapi[standard]>=0.115
+sqlmodel>=0.0.22
+asyncpg>=0.30
+alembic>=1.14
+redis>=5.2
+celery>=5.4
+python-jose[cryptography]>=3.3
+passlib[bcrypt]>=1.7
+langchain>=0.3
+langchain-community>=0.3
+openai>=1
+playwright>=1.49
+python-docx>=1.1
+PyPDF2>=3.0
+httpx>=0.28
+pydantic-settings>=2.7
+loguru>=0.7
